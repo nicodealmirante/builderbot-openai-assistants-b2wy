@@ -5,62 +5,85 @@ import { BaileysProvider } from '@builderbot/provider-baileys'
 import { toAsk, httpInject } from "@builderbot-plugins/openai-assistants"
 import { typing } from "./utils/presence"
 
-/** Puerto en el que se ejecutará el servidor */
 const PORT = process.env.PORT ?? 3008
-/** ID del asistente de OpenAI */
 const ASSISTANT_ID = process.env.ASSISTANT_ID ?? ''
-const userQueues = new Map();
-const userLocks = new Map(); // New lock mechanism
 
-/**
- * Function to process the user's message by sending it to the OpenAI API
- * and sending the response back to the user.
- */
+const userQueues = new Map();
+const userLocks = new Map();
+
+const DISABLED_USERS = new Set([
+    '54911XXXXXXXX' // ← Reemplazá con tu número
+]);
+
 const processUserMessage = async (ctx, { flowDynamic, state, provider }) => {
     await typing(ctx, provider);
     const response = await toAsk(ASSISTANT_ID, ctx.body, state);
 
-    // Split the response into chunks and send them sequentially
     const chunks = response.split(/\n\n+/);
     for (const chunk of chunks) {
         const cleanedChunk = chunk.trim().replace(/【.*?】[ ] /g, "");
-        await flowDynamic([{ body: cleanedChunk }]);
+
+        const urlRegex = /(https?:\/\/[^\s]+)/g;
+        const urls = cleanedChunk.match(urlRegex) || [];
+
+        let enviado = false;
+
+        for (const url of urls) {
+            if (/(\.jpg|\.jpeg|\.png|\.gif|\.webp)$/i.test(url)) {
+                await flowDynamic([{ body: '', media: url }]);
+                enviado = true;
+            } else if (/(\.mp4|\.mov|\.avi|\.mkv)$/i.test(url)) {
+                await flowDynamic([{ body: '', media: url }]);
+                enviado = true;
+            } else if (/(\.webp)$/i.test(url)) {
+                await flowDynamic([{ body: '', media: url }]);
+                enviado = true;
+            } else if (/(\.pdf|\.docx?|\.xlsx?|\.zip|\.rar)$/i.test(url)) {
+                await flowDynamic([{ body: '', media: url }]);
+                enviado = true;
+            }
+        }
+
+        if (!enviado && cleanedChunk !== '') {
+            await flowDynamic([{ body: cleanedChunk }]);
+        }
     }
 };
 
-/**
- * Function to handle the queue for each user.
- */
 const handleQueue = async (userId) => {
     const queue = userQueues.get(userId);
-    
-    if (userLocks.get(userId)) {
-        return; // If locked, skip processing
-    }
+    if (userLocks.get(userId)) return;
 
     while (queue.length > 0) {
-        userLocks.set(userId, true); // Lock the queue
+        userLocks.set(userId, true);
         const { ctx, flowDynamic, state, provider } = queue.shift();
         try {
             await processUserMessage(ctx, { flowDynamic, state, provider });
         } catch (error) {
             console.error(`Error processing message for user ${userId}:`, error);
         } finally {
-            userLocks.set(userId, false); // Release the lock
+            userLocks.set(userId, false);
         }
     }
 
-    userLocks.delete(userId); // Remove the lock once all messages are processed
-    userQueues.delete(userId); // Remove the queue once all messages are processed
+    userLocks.delete(userId);
+    userQueues.delete(userId);
 };
 
-/**
- * Flujo de bienvenida que maneja las respuestas del asistente de IA
- * @type {import('@builderbot/bot').Flow<BaileysProvider, MemoryDB>}
- */
-const welcomeFlow = addKeyword<BaileysProvider, MemoryDB>(EVENTS.WELCOME)
+const welcomeFlow = addKeyword(EVENTS.WELCOME)
     .addAction(async (ctx, { flowDynamic, state, provider }) => {
-        const userId = ctx.from; // Use the user's ID to create a unique queue for each user
+        const userId = ctx.from;
+
+        if (DISABLED_USERS.has(userId)) {
+            console.log(`⛔ Bot desactivado para ${userId}`);
+            return;
+        }
+
+        if (userId === '54911XXXXXXXX') {
+            DISABLED_USERS.add(userId);
+            console.log(`🔥 El TURRO REY apagó el bot para ${userId}`);
+            return;
+        }
 
         if (!userQueues.has(userId)) {
             userQueues.set(userId, []);
@@ -69,43 +92,21 @@ const welcomeFlow = addKeyword<BaileysProvider, MemoryDB>(EVENTS.WELCOME)
         const queue = userQueues.get(userId);
         queue.push({ ctx, flowDynamic, state, provider });
 
-        // If this is the only message in the queue, process it immediately
         if (!userLocks.get(userId) && queue.length === 1) {
             await handleQueue(userId);
         }
     });
 
-/**
- * Función principal que configura y inicia el bot
- * @async
- * @returns {Promise<void>}
- */
 const main = async () => {
-    /**
-     * Flujo del bot
-     * @type {import('@builderbot/bot').Flow<BaileysProvider, MemoryDB>}
-     */
     const adapterFlow = createFlow([welcomeFlow]);
 
-    /**
-     * Proveedor de servicios de mensajería
-     * @type {BaileysProvider}
-     */
     const adapterProvider = createProvider(BaileysProvider, {
         groupsIgnore: true,
         readStatus: false,
     });
 
-    /**
-     * Base de datos en memoria para el bot
-     * @type {MemoryDB}
-     */
     const adapterDB = new MemoryDB();
 
-    /**
-     * Configuración y creación del bot
-     * @type {import('@builderbot/bot').Bot<BaileysProvider, MemoryDB>}
-     */
     const { httpServer } = await createBot({
         flow: adapterFlow,
         provider: adapterProvider,
