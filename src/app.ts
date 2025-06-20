@@ -23,26 +23,40 @@ const processUserMessage = async (ctx, { flowDynamic, state, provider }) => {
     for (const chunk of chunks) {
         const cleanedChunk = chunk.trim().replace(/【.*?】[ ] /g, "");
 
-        const urlRegex = /(https?:\/\/[^\s]+)/g;
-        const urls = cleanedChunk.match(urlRegex) || [];
+        const urlRegex = /(https?:\/\/[^\s)]+)/g;
+        const markdownRegex = /!\[[^\]]*\]\((https?:\/\/[^\s)]+)\)/g;
 
-        let enviado = false;
+        let allUrls = [];
 
-        for (const url of urls) {
-            const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(url);
-            const isVideo = /\.(mp4|mov|avi|mkv)$/i.test(url);
-            const isSticker = /\.(webp)$/i.test(url);
-            const isFile = /\.(pdf|docx?|xlsx?|zip|rar)$/i.test(url);
+        // extrae urls directas
+        const directUrls = cleanedChunk.match(urlRegex) || [];
+        allUrls.push(...directUrls);
 
-            if ((isImage || isVideo || isSticker || isFile) && urls.length === 1 && cleanedChunk === url) {
+        // extrae urls de markdown ![]()
+        let mdMatch;
+        while ((mdMatch = markdownRegex.exec(cleanedChunk)) !== null) {
+            allUrls.push(mdMatch[1]);
+        }
+
+        // eliminar duplicados
+        allUrls = [...new Set(allUrls)];
+
+        const mediaUrls = allUrls.filter(url => /(\.jpg|\.jpeg|\.png|\.gif|\.webp|\.mp4|\.mov|\.avi|\.mkv|\.pdf|\.docx?|\.xlsx?|\.zip|\.rar)$/i.test(url));
+
+        if (mediaUrls.length > 0) {
+            for (const url of mediaUrls) {
                 await flowDynamic([{ body: '', media: url }]);
-                enviado = true;
-                break;
             }
         }
 
-        if (!enviado && cleanedChunk !== '') {
-            await flowDynamic([{ body: cleanedChunk }]);
+        // enviar el texto sin los markdown y links
+        const cleanedText = cleanedChunk
+            .replace(markdownRegex, '')
+            .replace(urlRegex, '')
+            .trim();
+
+        if (cleanedText !== '') {
+            await flowDynamic([{ body: cleanedText }]);
         }
     }
 };
