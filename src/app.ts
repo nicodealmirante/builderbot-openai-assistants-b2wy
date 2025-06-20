@@ -29,18 +29,15 @@ const processUserMessage = async (ctx, { flowDynamic, state, provider }) => {
         let enviado = false;
 
         for (const url of urls) {
-            if (/(\.jpg|\.jpeg|\.png|\.gif|\.webp)$/i.test(url)) {
+            const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(url);
+            const isVideo = /\.(mp4|mov|avi|mkv)$/i.test(url);
+            const isSticker = /\.(webp)$/i.test(url);
+            const isFile = /\.(pdf|docx?|xlsx?|zip|rar)$/i.test(url);
+
+            if ((isImage || isVideo || isSticker || isFile) && urls.length === 1 && cleanedChunk === url) {
                 await flowDynamic([{ body: '', media: url }]);
                 enviado = true;
-            } else if (/(\.mp4|\.mov|\.avi|\.mkv)$/i.test(url)) {
-                await flowDynamic([{ body: '', media: url }]);
-                enviado = true;
-            } else if (/(\.webp)$/i.test(url)) {
-                await flowDynamic([{ body: '', media: url }]);
-                enviado = true;
-            } else if (/(\.pdf|\.docx?|\.xlsx?|\.zip|\.rar)$/i.test(url)) {
-                await flowDynamic([{ body: '', media: url }]);
-                enviado = true;
+                break;
             }
         }
 
