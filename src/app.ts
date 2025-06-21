@@ -4,9 +4,13 @@ import { MemoryDB } from '@builderbot/bot'
 import { BaileysProvider } from '@builderbot/provider-baileys'
 import { toAsk, httpInject } from "@builderbot-plugins/openai-assistants"
 import { typing } from "./utils/presence"
+import axios from 'axios'
 
 const PORT = process.env.PORT ?? 3008
 const ASSISTANT_ID = process.env.ASSISTANT_ID ?? ''
+const CHATWOOT_URL = process.env.CHATWOOT_URL ?? ''
+const CHATWOOT_TOKEN = process.env.CHATWOOT_TOKEN ?? ''
+const CHATWOOT_INBOX_ID = process.env.CHATWOOT_INBOX_ID ?? ''
 
 const userQueues = new Map();
 const userLocks = new Map();
@@ -14,6 +18,22 @@ const userLocks = new Map();
 const DISABLED_USERS = new Set([
     '54911XXXXXXXX' // ← Reemplazá con tu número
 ]);
+
+const sendToChatwoot = async (userId, message) => {
+    try {
+        await axios.post(`${CHATWOOT_URL}/api/v1/inboxes/${CHATWOOT_INBOX_ID}/contacts/whatsapp/messages`, {
+            contact_identifier: userId,
+            content: message,
+        }, {
+            headers: {
+                api_access_token: CHATWOOT_TOKEN,
+                'Content-Type': 'application/json'
+            }
+        });
+    } catch (error) {
+        console.error('Error enviando a Chatwoot:', error.message);
+    }
+};
 
 const processUserMessage = async (ctx, { flowDynamic, state, provider }) => {
     await typing(ctx, provider);
@@ -28,17 +48,14 @@ const processUserMessage = async (ctx, { flowDynamic, state, provider }) => {
 
         let allUrls = [];
 
-        // extrae urls directas
         const directUrls = cleanedChunk.match(urlRegex) || [];
         allUrls.push(...directUrls);
 
-        // extrae urls de markdown ![]()
         let mdMatch;
         while ((mdMatch = markdownRegex.exec(cleanedChunk)) !== null) {
             allUrls.push(mdMatch[1]);
         }
 
-        // eliminar duplicados
         allUrls = [...new Set(allUrls)];
 
         const mediaUrls = allUrls.filter(url => /(\.jpg|\.jpeg|\.png|\.gif|\.webp|\.mp4|\.mov|\.avi|\.mkv|\.pdf|\.docx?|\.xlsx?|\.zip|\.rar)$/i.test(url));
@@ -49,7 +66,6 @@ const processUserMessage = async (ctx, { flowDynamic, state, provider }) => {
             }
         }
 
-        // enviar el texto sin los markdown y links
         const cleanedText = cleanedChunk
             .replace(markdownRegex, '')
             .replace(urlRegex, '')
@@ -57,6 +73,7 @@ const processUserMessage = async (ctx, { flowDynamic, state, provider }) => {
 
         if (cleanedText !== '') {
             await flowDynamic([{ body: cleanedText }]);
+            await sendToChatwoot(ctx.from, cleanedText);
         }
     }
 };
