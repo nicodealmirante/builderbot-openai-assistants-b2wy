@@ -28,21 +28,13 @@ const processUserMessage = async (ctx, { flowDynamic, state, provider }) => {
 
         let enviado = false;
 
-        for (const url of urls) {
-            if (/(\.jpg|\.jpeg|\.png|\.gif|\.webp)$/i.test(url)) {
-                await flowDynamic([{ body: '', media: url }]);
-                enviado = true;
-            } else if (/(\.mp4|\.mov|\.avi|\.mkv)$/i.test(url)) {
-                await flowDynamic([{ body: '', media: url }]);
-                enviado = true;
-            } else if (/(\.webp)$/i.test(url)) {
-                await flowDynamic([{ body: '', media: url }]);
-                enviado = true;
-            } else if (/(\.pdf|\.docx?|\.xlsx?|\.zip|\.rar)$/i.test(url)) {
-                await flowDynamic([{ body: '', media: url }]);
-                enviado = true;
-            }
-        }
+for (const url of mediaUrls) {
+    try {
+        await provider.sendMedia(ctx.from, url, { caption: '' });
+    } catch (err) {
+        console.error('❌ Error al enviar media:', err.message);
+    }
+}
 
         if (!enviado && cleanedChunk !== '') {
             await flowDynamic([{ body: cleanedChunk }]);
