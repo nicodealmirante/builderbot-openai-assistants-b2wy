@@ -46,24 +46,35 @@ const processUserMessage = async (ctx, { flowDynamic, state, provider }) => {
 
         // Obtener JID válido
         const jid = ctx.key?.remoteJid || ctx.from;
+// Enviar imágenes
+for (const url of imageUrls) {
+    try {
+        await provider.sendMedia(jid, url, { caption: 'Selfie Mirror' });
+    } catch (err) {
+        console.error('❌ Error enviando imagen:', err.message);
+    }
+}
 
-        // Enviar imágenes
-        for (const url of imageUrls) {
-            try {
-                await provider.sendMedia(jid, url, { caption: '' });
-            } catch (err) {
-                console.error('❌ Error enviando imagen:', err.message);
-            }
-        }
+// Enviar videos
+for (const url of videoUrls) {
+    try {
+        await provider.sendMedia(jid, url, { caption: 'Selfie Mirror' });
+    } catch (err) {
+        console.error('❌ Error enviando video:', err.message);
+    }
+}
 
-        // Enviar videos
-        for (const url of videoUrls) {
-            try {
-                await provider.sendMedia(jid, url, { caption: '' });
-            } catch (err) {
-                console.error('❌ Error enviando video:', err.message);
-            }
-        }
+// Enviar documentos
+for (const url of docUrls) {
+    try {
+        await provider.sendMedia(jid, url, {
+            mimetype: 'application/octet-stream',
+            caption: 'Selfie Mirror',
+        });
+    } catch (err) {
+        console.error('❌ Error enviando documento:', err.message);
+    }
+}
 
         // Enviar stickers
         for (const url of stickerUrls) {
@@ -76,17 +87,6 @@ const processUserMessage = async (ctx, { flowDynamic, state, provider }) => {
             }
         }
 
-        // Enviar documentos
-        for (const url of docUrls) {
-            try {
-                await provider.sendMedia(jid, url, {
-                    mimetype: 'application/octet-stream',
-                    caption: '',
-                });
-            } catch (err) {
-                console.error('❌ Error enviando documento:', err.message);
-            }
-        }
 
         // Limpiar y enviar el texto sin links
         const cleanedText = cleanedChunk
