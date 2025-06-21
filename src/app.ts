@@ -15,9 +15,55 @@ const DISABLED_USERS = new Set([
     '54911XXXXXXXX' // ← Reemplazá con tu número
 ]);
 
-// Obtener JID válido
-const jid = ctx.key?.remoteJid || ctx.from;
+const processUserMessage = async (ctx, { flowDynamic, state, provider }) => {More actions
+    await typing(ctx, provider);
+    const response = await toAsk(ASSISTANT_ID, ctx.body, state);
 
+    const chunks = response.split(/\n\n+/);
+    for (const chunk of chunks) {
+        const cleanedChunk = chunk.trim().replace(/【.*?】[ ] /g, "");
+
+        const urlRegex = /(https?:\/\/[^\s]+)/g;
+        const markdownRegex = /!\[[^\]]*\]\((https?:\/\/[^\s)]+)\)/g;
+
+        let urls = [];
+
+        // Extraer URLs de markdown y directas
+        let match;
+        while ((match = markdownRegex.exec(cleanedChunk)) !== null) {
+            urls.push(match[1]);
+        }
+
+        const directUrls = cleanedChunk.match(urlRegex) || [];
+        urls.push(...directUrls);
+        urls = [...new Set(urls)];
+
+        // Separar por tipo de archivo
+        const imageUrls = urls.filter(url => /\.(jpg|jpeg|png|gif)$/i.test(url));
+        const videoUrls = urls.filter(url => /\.(mp4|mov|avi|mkv)$/i.test(url));
+        const stickerUrls = urls.filter(url => /\.webp$/i.test(url));
+        const docUrls = urls.filter(url => /\.(pdf|docx?|xlsx?|zip|rar)$/i.test(url));
+
+        // Obtener JID válido
+        const jid = ctx.key?.remoteJid || ctx.from;
+
+        // Enviar imágenes
+        for (const url of imageUrls) {
+            try {
+                await provider.sendMedia(jid, url, { caption: '' });
+            } catch (err) {
+                console.error('❌ Error enviando imagen:', err.message);
+            }
+        }
+
+        // Enviar videos
+        for (const url of videoUrls) {
+            try {
+                await provider.sendMedia(jid, url, { caption: '' });
+            } catch (err) {
+                console.error('❌ Error enviando video:', err.message);
+            }
+        }
 // Enviar imágenes
 for (const url of imageUrls) {
     try {
@@ -36,15 +82,6 @@ for (const url of videoUrls) {
     }
 }
 
-// Enviar stickers
-for (const url of stickerUrls) {
-    try {
-        await provider.sendMedia(jid, url, { isSticker: true });
-    } catch (err) {
-        console.error('❌ Error enviando sticker:', err.message);
-    }
-}
-
 // Enviar documentos
 for (const url of docUrls) {
     try {
@@ -56,6 +93,42 @@ for (const url of docUrls) {
         console.error('❌ Error enviando documento:', err.message);
     }
 }
+
+        // Enviar stickers
+        for (const url of stickerUrls) {
+            try {
+                await provider.sendMedia(jid, url, {
+                    isSticker: true,
+                });
+            } catch (err) {
+                console.error('❌ Error enviando sticker:', err.message);
+            }
+        }
+
+        // Enviar documentos
+        for (const url of docUrls) {
+            try {
+                await provider.sendMedia(jid, url, {
+                    mimetype: 'application/octet-stream',
+                    caption: '',
+                });
+            } catch (err) {
+                console.error('❌ Error enviando documento:', err.message);
+            }
+        }
+
+        // Limpiar y enviar el texto sin links
+        const cleanedText = cleanedChunk
+            .replace(markdownRegex, '')
+            .replace(urlRegex, '')
+            .trim();
+
+        if (cleanedText !== '') {
+            await flowDynamic([{ body: cleanedText }]);
+        }
+    }
+};
+
 
 
 const handleQueue = async (userId) => {
