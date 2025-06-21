@@ -47,7 +47,7 @@ const processUserMessage = async (ctx, { flowDynamic, state, provider }) => {
 
         // Enviar cada media como archivo
         for (const url of mediaUrls) {
-            await flowDynamic([{ body: '', media: url }]);
+await provider.sendMedia(ctx.from, url, { caption: '' });
         }
 
         // Limpiar texto para no repetir links
