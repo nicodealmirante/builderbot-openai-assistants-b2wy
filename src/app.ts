@@ -14,6 +14,7 @@ const userLocks = new Map();
 const DISABLED_USERS = new Set([
     '54911XXXXXXXX' // ← Reemplazá con tu número
 ]);
+
 const processUserMessage = async (ctx, { flowDynamic, state, provider }) => {
     await typing(ctx, provider);
     const response = await toAsk(ASSISTANT_ID, ctx.body, state);
@@ -22,35 +23,38 @@ const processUserMessage = async (ctx, { flowDynamic, state, provider }) => {
     for (const chunk of chunks) {
         const cleanedChunk = chunk.trim().replace(/【.*?】[ ] /g, "");
 
-        const markdownRegex = /!\[[^\]]*\]\((https?:\/\/[^\s)]+)\)/g;
         const urlRegex = /(https?:\/\/[^\s]+)/g;
+        const markdownRegex = /!\[[^\]]*\]\((https?:\/\/[^\s)]+)\)/g;
 
         let urls = [];
 
-        // Extraer URLs de markdown tipo ![img](url)
+        // Extraer URLs del texto (markdown y directos)
         let match;
         while ((match = markdownRegex.exec(cleanedChunk)) !== null) {
             urls.push(match[1]);
         }
 
-        // Extraer URLs directas
         const directUrls = cleanedChunk.match(urlRegex) || [];
         urls.push(...directUrls);
 
         // Eliminar duplicados
         urls = [...new Set(urls)];
 
-        // Filtrar URLs de medios
+        // Filtrar solo archivos multimedia
         const mediaUrls = urls.filter(url =>
             /\.(jpg|jpeg|png|gif|webp|mp4|mov|avi|mkv|pdf|docx?|xlsx?|zip|rar)$/i.test(url)
         );
 
-        // Enviar cada media como archivo
+        // Enviar archivos como media
         for (const url of mediaUrls) {
-await provider.sendMedia(ctx.from, url, { caption: '' });
+            try {
+                await provider.sendMedia(ctx.from, url, { caption: '' });
+            } catch (err) {
+                console.error('❌ Error al enviar media:', err.message);
+            }
         }
 
-        // Limpiar texto para no repetir links
+        // Limpiar texto removiendo URLs
         const cleanedText = cleanedChunk
             .replace(markdownRegex, '')
             .replace(urlRegex, '')
@@ -61,6 +65,7 @@ await provider.sendMedia(ctx.from, url, { caption: '' });
         }
     }
 };
+
 
 
 const handleQueue = async (userId) => {
