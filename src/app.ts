@@ -14,7 +14,6 @@ const userLocks = new Map();
 const DISABLED_USERS = new Set([
     '54911XXXXXXXX' // ← Reemplazá con tu número
 ]);
-
 const processUserMessage = async (ctx, { flowDynamic, state, provider }) => {
     await typing(ctx, provider);
     const response = await toAsk(ASSISTANT_ID, ctx.body, state);
@@ -23,32 +22,46 @@ const processUserMessage = async (ctx, { flowDynamic, state, provider }) => {
     for (const chunk of chunks) {
         const cleanedChunk = chunk.trim().replace(/【.*?】[ ] /g, "");
 
+        const markdownRegex = /!\[[^\]]*\]\((https?:\/\/[^\s)]+)\)/g;
         const urlRegex = /(https?:\/\/[^\s]+)/g;
-        const urls = cleanedChunk.match(urlRegex) || [];
 
-        let enviado = false;
+        let urls = [];
 
-        for (const url of urls) {
-            if (/(\.jpg|\.jpeg|\.png|\.gif|\.webp)$/i.test(url)) {
-                await flowDynamic([{ body: '', media: url }]);
-                enviado = true;
-            } else if (/(\.mp4|\.mov|\.avi|\.mkv)$/i.test(url)) {
-                await flowDynamic([{ body: '', media: url }]);
-                enviado = true;
-            } else if (/(\.webp)$/i.test(url)) {
-                await flowDynamic([{ body: '', media: url }]);
-                enviado = true;
-            } else if (/(\.pdf|\.docx?|\.xlsx?|\.zip|\.rar)$/i.test(url)) {
-                await flowDynamic([{ body: '', media: url }]);
-                enviado = true;
-            }
+        // Extraer URLs de markdown tipo ![img](url)
+        let match;
+        while ((match = markdownRegex.exec(cleanedChunk)) !== null) {
+            urls.push(match[1]);
         }
 
-        if (!enviado && cleanedChunk !== '') {
-            await flowDynamic([{ body: cleanedChunk }]);
+        // Extraer URLs directas
+        const directUrls = cleanedChunk.match(urlRegex) || [];
+        urls.push(...directUrls);
+
+        // Eliminar duplicados
+        urls = [...new Set(urls)];
+
+        // Filtrar URLs de medios
+        const mediaUrls = urls.filter(url =>
+            /\.(jpg|jpeg|png|gif|webp|mp4|mov|avi|mkv|pdf|docx?|xlsx?|zip|rar)$/i.test(url)
+        );
+
+        // Enviar cada media como archivo
+        for (const url of mediaUrls) {
+            await flowDynamic([{ body: '', media: url }]);
+        }
+
+        // Limpiar texto para no repetir links
+        const cleanedText = cleanedChunk
+            .replace(markdownRegex, '')
+            .replace(urlRegex, '')
+            .trim();
+
+        if (cleanedText !== '') {
+            await flowDynamic([{ body: cleanedText }]);
         }
     }
 };
+
 
 const handleQueue = async (userId) => {
     const queue = userQueues.get(userId);
