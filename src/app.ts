@@ -15,7 +15,7 @@ const DISABLED_USERS = new Set([
     '54911XXXXXXXX' // ← Reemplazá con tu número
 ]);
 
-const processUserMessage = async (ctx, { flowDynamic, state, provider }) => {More actions
+const processUserMessage = async (ctx, { flowDynamic, state, provider }) => {
     await typing(ctx, provider);
     const response = await toAsk(ASSISTANT_ID, ctx.body, state);
 
@@ -44,26 +44,10 @@ const processUserMessage = async (ctx, { flowDynamic, state, provider }) => {Mor
         const stickerUrls = urls.filter(url => /\.webp$/i.test(url));
         const docUrls = urls.filter(url => /\.(pdf|docx?|xlsx?|zip|rar)$/i.test(url));
 
-        // Obtener JID válido
-        const jid = ctx.key?.remoteJid || ctx.from;
 
-        // Enviar imágenes
-        for (const url of imageUrls) {
-            try {
-                await provider.sendMedia(jid, url, { caption: '' });
-            } catch (err) {
-                console.error('❌ Error enviando imagen:', err.message);
-            }
-        }
+// Obtener JID válido
+const jid = ctx.key?.remoteJid || ctx.from;
 
-        // Enviar videos
-        for (const url of videoUrls) {
-            try {
-                await provider.sendMedia(jid, url, { caption: '' });
-            } catch (err) {
-                console.error('❌ Error enviando video:', err.message);
-            }
-        }
 // Enviar imágenes
 for (const url of imageUrls) {
     try {
@@ -82,6 +66,15 @@ for (const url of videoUrls) {
     }
 }
 
+// Enviar stickers
+for (const url of stickerUrls) {
+    try {
+        await provider.sendMedia(jid, url, { isSticker: true });
+    } catch (err) {
+        console.error('❌ Error enviando sticker:', err.message);
+    }
+}
+
 // Enviar documentos
 for (const url of docUrls) {
     try {
@@ -94,29 +87,6 @@ for (const url of docUrls) {
     }
 }
 
-        // Enviar stickers
-        for (const url of stickerUrls) {
-            try {
-                await provider.sendMedia(jid, url, {
-                    isSticker: true,
-                });
-            } catch (err) {
-                console.error('❌ Error enviando sticker:', err.message);
-            }
-        }
-
-        // Enviar documentos
-        for (const url of docUrls) {
-            try {
-                await provider.sendMedia(jid, url, {
-                    mimetype: 'application/octet-stream',
-                    caption: '',
-                });
-            } catch (err) {
-                console.error('❌ Error enviando documento:', err.message);
-            }
-        }
-
         // Limpiar y enviar el texto sin links
         const cleanedText = cleanedChunk
             .replace(markdownRegex, '')
@@ -128,6 +98,7 @@ for (const url of docUrls) {
         }
     }
 };
+    
 
 
 
