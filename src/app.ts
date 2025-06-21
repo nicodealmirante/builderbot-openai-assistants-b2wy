@@ -45,15 +45,14 @@ const processUserMessage = async (ctx, { flowDynamic, state, provider }) => {
             /\.(jpg|jpeg|png|gif|webp|mp4|mov|avi|mkv|pdf|docx?|xlsx?|zip|rar)$/i.test(url)
         );
 
-        // Enviar archivos como media
-        for (const url of mediaUrls) {
-            try {
-                await provider.sendMedia(ctx.from, url, { caption: '' });
-            } catch (err) {
-                console.error('❌ Error al enviar media:', err.message);
-            }
-        }
-
+for (const url of mediaUrls) {
+    try {
+        const jid = ctx.key?.remoteJid || ctx.from;
+        await provider.sendMedia(jid, url, { caption: '' });
+    } catch (err) {
+        console.error('❌ Error al enviar media:', err.message);
+    }
+}
         // Limpiar texto removiendo URLs
         const cleanedText = cleanedChunk
             .replace(markdownRegex, '')
