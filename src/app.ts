@@ -99,17 +99,7 @@ const processUserMessage = async (ctx, { flowDynamic, state, provider }) => {
         }
     }
 };
-        // Limpiar texto removiendo URLs
-        const cleanedText = cleanedChunk
-            .replace(markdownRegex, '')
-            .replace(urlRegex, '')
-            .trim();
-
-        if (cleanedText !== '') {
-            await flowDynamic([{ body: cleanedText }]);
-        }
-    }
-};
+    
 
 
 
