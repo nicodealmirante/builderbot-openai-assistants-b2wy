@@ -4,6 +4,7 @@ import { MemoryDB } from '@builderbot/bot'
 import { BaileysProvider } from '@builderbot/provider-baileys'
 import { toAsk, httpInject } from "@builderbot-plugins/openai-assistants"
 import { typing } from "./utils/presence"
+import { sendChatwootMessage } from "./utils/chatwoot"
 
 const PORT = process.env.PORT ?? 3008
 const ASSISTANT_ID = process.env.ASSISTANT_ID ?? ''
@@ -12,11 +13,12 @@ const userQueues = new Map();
 const userLocks = new Map();
 
 const DISABLED_USERS = new Set([
-    '54911XXXXXXXX' // ← Reemplazá con tu número
+    '5491166704322' // ← Reemplazá con tu número
 ]);
 
 const processUserMessage = async (ctx, { flowDynamic, state, provider }) => {
     await typing(ctx, provider);
+    await sendChatwootMessage(ctx.from, ctx.body, false);
     const response = await toAsk(ASSISTANT_ID, ctx.body, state);
 
     const chunks = response.split(/\n\n+/);
@@ -95,6 +97,7 @@ for (const url of docUrls) {
 
         if (cleanedText !== '') {
             await flowDynamic([{ body: cleanedText }]);
+            await sendChatwootMessage(ctx.from, cleanedText, true);
         }
     }
 };
@@ -131,7 +134,7 @@ const welcomeFlow = addKeyword(EVENTS.WELCOME)
             return;
         }
 
-        if (userId === '54911XXXXXXXX') {
+        if (userId === '5491166704322') {
             DISABLED_USERS.add(userId);
             console.log(`🔥 El TURRO REY apagó el bot para ${userId}`);
             return;

@@ -17,6 +17,7 @@ This project creates a WhatsApp bot that integrates with an AI assistant using B
 - Real-time message receiving and responding
 - Interaction tracking with customers
 - Expandable functionality through triggers
+- Optional Chatwoot webhook integration for conversation logging
 
 ## Getting Started
 
@@ -29,6 +30,8 @@ This project creates a WhatsApp bot that integrates with an AI assistant using B
    ```
    PORT=3008
    ASSISTANT_ID=your_openai_assistant_id
+   CHATWOOT_WEBHOOK_URL=https://your-chatwoot.example/webhook
+   CHATWOOT_TOKEN=optional_api_token
    ```
 4. Run the development server:
    ```
