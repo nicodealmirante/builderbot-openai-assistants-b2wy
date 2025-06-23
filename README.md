@@ -27,9 +27,13 @@ This project creates a WhatsApp bot that integrates with an AI assistant using B
    ```
 3. Set up your environment variables in a `.env` file:
    ```
-   PORT=3008
-   ASSISTANT_ID=your_openai_assistant_id
-   ```
+ PORT=3008
+ ASSISTANT_ID=your_openai_assistant_id
+ CHATWOOT_URL=https://app.chatwoot.com
+ CHATWOOT_ACCOUNT_ID=your_account_id
+ CHATWOOT_ACCESS_TOKEN=your_access_token
+ CHATWOOT_INBOX_ID=your_inbox_id
+  ```
 4. Run the development server:
    ```
    pnpm run dev
@@ -53,6 +57,10 @@ This method ensures that the application runs in a consistent environment across
 ## Usage
 
 The bot is configured in the `src/app.ts` file. It uses the BuilderBot library to create flows and handle messages. The main welcome flow integrates with the OpenAI assistant to generate responses.
+
+### Chatwoot integration
+
+Set the Chatwoot credentials in the environment variables to automatically log every conversation in your Chatwoot inbox. Incoming messages are recorded as `incoming` type and bot replies as `outgoing`.
 
 ## Documentation
 

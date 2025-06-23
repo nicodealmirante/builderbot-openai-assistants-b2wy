@@ -4,6 +4,7 @@ import { MemoryDB } from '@builderbot/bot'
 import { BaileysProvider } from '@builderbot/provider-baileys'
 import { toAsk, httpInject } from "@builderbot-plugins/openai-assistants"
 import { typing } from "./utils/presence"
+import { createConversation, sendMessage } from './chatwoot'
 
 const PORT = process.env.PORT ?? 3008
 const ASSISTANT_ID = process.env.ASSISTANT_ID ?? ''
@@ -16,6 +17,24 @@ const DISABLED_USERS = new Set([
 ]);
 
 const processUserMessage = async (ctx, { flowDynamic, state, provider }) => {
+    let chatwootConversationId = state.get('chatwootConversationId')
+    if (!chatwootConversationId) {
+        try {
+            chatwootConversationId = await createConversation(ctx.from)
+            await state.update({ chatwootConversationId })
+        } catch (error) {
+            console.error('Error creating Chatwoot conversation:', error)
+        }
+    }
+
+    if (chatwootConversationId) {
+        try {
+            await sendMessage(chatwootConversationId, ctx.body, 'incoming')
+        } catch (err) {
+            console.error('Error sending incoming message to Chatwoot:', err)
+        }
+    }
+
     await typing(ctx, provider);
     const response = await toAsk(ASSISTANT_ID, ctx.body, state);
 
@@ -46,6 +65,13 @@ const processUserMessage = async (ctx, { flowDynamic, state, provider }) => {
         if (mediaUrls.length > 0) {
             for (const url of mediaUrls) {
                 await flowDynamic([{ body: '', media: url }]);
+                if (chatwootConversationId) {
+                    try {
+                        await sendMessage(chatwootConversationId, url, 'outgoing')
+                    } catch (err) {
+                        console.error('Error sending media to Chatwoot:', err)
+                    }
+                }
             }
         }
 
@@ -57,6 +83,13 @@ const processUserMessage = async (ctx, { flowDynamic, state, provider }) => {
 
         if (cleanedText !== '') {
             await flowDynamic([{ body: cleanedText }]);
+            if (chatwootConversationId) {
+                try {
+                    await sendMessage(chatwootConversationId, cleanedText, 'outgoing')
+                } catch (err) {
+                    console.error('Error sending response to Chatwoot:', err)
+                }
+            }
         }
     }
 };
