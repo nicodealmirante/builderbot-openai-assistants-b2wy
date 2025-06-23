@@ -12,7 +12,7 @@ const userQueues = new Map();
 const userLocks = new Map();
 
 const DISABLED_USERS = new Set([
-    '54911XXXXXXXX' // ← Reemplazá con tu número
+    '5491166704322' // ← Reemplazá con tu número
 ]);
 
 const STOP_COMMANDS = ['stop', 'detener', 'apagar', 'salir'];
@@ -143,7 +143,7 @@ const welcomeFlow = addKeyword(EVENTS.WELCOME)
             return;
         }
 
-        if (userId === '54911XXXXXXXX') {
+        if (userId === '5481166704322') {
             DISABLED_USERS.add(userId);
             console.log(`🔥 El TURRO REY apagó el bot para ${userId}`);
             return;
