@@ -15,6 +15,8 @@ const DISABLED_USERS = new Set([
     '54911XXXXXXXX' // ← Reemplazá con tu número
 ]);
 
+const STOP_COMMANDS = ['stop', 'detener', 'apagar', 'salir'];
+
 const processUserMessage = async (ctx, { flowDynamic, state, provider }) => {
     await typing(ctx, provider);
     const response = await toAsk(ASSISTANT_ID, ctx.body, state);
@@ -128,6 +130,16 @@ const welcomeFlow = addKeyword(EVENTS.WELCOME)
 
         if (DISABLED_USERS.has(userId)) {
             console.log(`⛔ Bot desactivado para ${userId}`);
+            return;
+        }
+
+        const text = (ctx.body ?? '').trim().toLowerCase();
+        if (STOP_COMMANDS.includes(text)) {
+            DISABLED_USERS.add(userId);
+            userQueues.delete(userId);
+            userLocks.delete(userId);
+            await flowDynamic([{ body: 'Bot desactivado para este número.' }]);
+            console.log(`⛔ Bot desactivado por comando para ${userId}`);
             return;
         }
 
