@@ -4,7 +4,7 @@ import { MemoryDB } from '@builderbot/bot'
 import { BaileysProvider } from '@builderbot/provider-baileys'
 import { toAsk, httpInject } from "@builderbot-plugins/openai-assistants"
 import { typing } from "./utils/presence"
-import { createConversation, sendMessage } from './chatwoot'
+import { createConversation, sendMessage, sendAttachmentFromUrl, sendAttachmentFromFile } from './chatwoot'
 
 const PORT = process.env.PORT ?? 3008
 const ASSISTANT_ID = process.env.ASSISTANT_ID ?? ''
@@ -29,7 +29,12 @@ const processUserMessage = async (ctx, { flowDynamic, state, provider }) => {
 
     if (chatwootConversationId) {
         try {
-            await sendMessage(chatwootConversationId, ctx.body, 'incoming')
+            if (['_event_media_', '_event_document_', '_event_voice_note_'].includes(ctx.body)) {
+                const filePath = await provider.saveFile(ctx)
+                await sendAttachmentFromFile(chatwootConversationId, filePath, 'incoming')
+            } else {
+                await sendMessage(chatwootConversationId, ctx.body, 'incoming')
+            }
         } catch (err) {
             console.error('Error sending incoming message to Chatwoot:', err)
         }
@@ -67,7 +72,7 @@ const processUserMessage = async (ctx, { flowDynamic, state, provider }) => {
                 await flowDynamic([{ body: '', media: url }]);
                 if (chatwootConversationId) {
                     try {
-                        await sendMessage(chatwootConversationId, url, 'outgoing')
+                        await sendAttachmentFromUrl(chatwootConversationId, url, 'outgoing')
                     } catch (err) {
                         console.error('Error sending media to Chatwoot:', err)
                     }
