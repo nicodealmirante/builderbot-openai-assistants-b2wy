@@ -4,6 +4,7 @@ import { MemoryDB } from '@builderbot/bot'
 import { BaileysProvider } from '@builderbot/provider-baileys'
 import { toAsk, httpInject } from "@builderbot-plugins/openai-assistants"
 import { typing } from "./utils/presence"
+import { createConversation, sendMessage, sendAttachmentFromUrl, sendAttachmentFromFile } from './chatwoot'
 
 const PORT = process.env.PORT ?? 3008
 const ASSISTANT_ID = process.env.ASSISTANT_ID ?? ''
@@ -12,12 +13,40 @@ const userQueues = new Map();
 const userLocks = new Map();
 
 const DISABLED_USERS = new Set([
-    '54911XXXXXXXX' // ← Reemplazá con tu número
+    '5491166704322' // ← Reemplazá con tu número
 ]);
 
 const processUserMessage = async (ctx, { flowDynamic, state, provider }) => {
+    let chatwootConversationId = state.get('chatwootConversationId')
+    if (!chatwootConversationId) {
+        try {
+            chatwootConversationId = await createConversation(ctx.from)
+            await state.update({ chatwootConversationId })
+        } catch (error) {
+            console.error('Error creating Chatwoot conversation:', error)
+        }
+    }
+
+    if (chatwootConversationId) {
+        try {
+            if (['_event_media_', '_event_document_', '_event_voice_note_'].includes(ctx.body)) {
+                const filePath = await provider.saveFile(ctx)
+                await sendAttachmentFromFile(chatwootConversationId, filePath, 'incoming')
+            } else {
+                await sendMessage(chatwootConversationId, ctx.body, 'incoming')
+            }
+        } catch (err) {
+            console.error('Error sending incoming message to Chatwoot:', err)
+        }
+    }
+
     await typing(ctx, provider);
     const response = await toAsk(ASSISTANT_ID, ctx.body, state);
+
+    if (response.toUpperCase().includes('LUNA OFF')) {
+        DISABLED_USERS.add(ctx.from)
+        console.log(`Bot disabled by instruction for ${ctx.from}`)
+    }
 
     const chunks = response.split(/\n\n+/);
     for (const chunk of chunks) {
@@ -46,6 +75,13 @@ const processUserMessage = async (ctx, { flowDynamic, state, provider }) => {
         if (mediaUrls.length > 0) {
             for (const url of mediaUrls) {
                 await flowDynamic([{ body: '', media: url }]);
+                if (chatwootConversationId) {
+                    try {
+                        await sendAttachmentFromUrl(chatwootConversationId, url, 'outgoing')
+                    } catch (err) {
+                        console.error('Error sending media to Chatwoot:', err)
+                    }
+                }
             }
         }
 
@@ -57,6 +93,13 @@ const processUserMessage = async (ctx, { flowDynamic, state, provider }) => {
 
         if (cleanedText !== '') {
             await flowDynamic([{ body: cleanedText }]);
+            if (chatwootConversationId) {
+                try {
+                    await sendMessage(chatwootConversationId, cleanedText, 'outgoing')
+                } catch (err) {
+                    console.error('Error sending response to Chatwoot:', err)
+                }
+            }
         }
     }
 };
@@ -90,7 +133,7 @@ const welcomeFlow = addKeyword(EVENTS.WELCOME)
             return;
         }
 
-        if (userId === '54911XXXXXXXX') {
+        if (userId === '5491166704322') {
             DISABLED_USERS.add(userId);
             console.log(`🔥 El TURRO REY apagó el bot para ${userId}`);
             return;
