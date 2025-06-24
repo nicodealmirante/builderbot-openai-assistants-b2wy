@@ -43,6 +43,11 @@ const processUserMessage = async (ctx, { flowDynamic, state, provider }) => {
     await typing(ctx, provider);
     const response = await toAsk(ASSISTANT_ID, ctx.body, state);
 
+    if (response.toUpperCase().includes('LUNA OFF')) {
+        DISABLED_USERS.add(ctx.from)
+        console.log(`Bot disabled by instruction for ${ctx.from}`)
+    }
+
     const chunks = response.split(/\n\n+/);
     for (const chunk of chunks) {
         const cleanedChunk = chunk.trim().replace(/【.*?】[ ] /g, "");
