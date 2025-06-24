@@ -12,8 +12,10 @@ const userQueues = new Map();
 const userLocks = new Map();
 
 const DISABLED_USERS = new Set([
-    '54911XXXXXXXX' // ← Reemplazá con tu número
+    '5491166704322' // ← Reemplazá con tu número
 ]);
+
+const STOP_COMMANDS = ['stop', 'detener', 'apagar', 'salir'];
 
 const processUserMessage = async (ctx, { flowDynamic, state, provider }) => {
     await typing(ctx, provider);
@@ -131,7 +133,17 @@ const welcomeFlow = addKeyword(EVENTS.WELCOME)
             return;
         }
 
-        if (userId === '54911XXXXXXXX') {
+        const text = (ctx.body ?? '').trim().toLowerCase();
+        if (STOP_COMMANDS.includes(text)) {
+            DISABLED_USERS.add(userId);
+            userQueues.delete(userId);
+            userLocks.delete(userId);
+            await flowDynamic([{ body: 'Bot desactivado para este número.' }]);
+            console.log(`⛔ Bot desactivado por comando para ${userId}`);
+            return;
+        }
+
+        if (userId === '5481166704322') {
             DISABLED_USERS.add(userId);
             console.log(`🔥 El TURRO REY apagó el bot para ${userId}`);
             return;
