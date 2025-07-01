@@ -127,6 +127,13 @@ const handleQueue = async (userId) => {
 const welcomeFlow = addKeyword(EVENTS.WELCOME)
     .addAction(async (ctx, { flowDynamic, state, provider }) => {
         const userId = ctx.from;
+        const text = (ctx.body || '').trim().toLowerCase();
+
+        if (ctx.key?.fromMe && text === 'stop') {
+            DISABLED_USERS.add(userId);
+            console.log(`🛑 Bot desactivado para ${userId} tras recibir 'stop'`);
+            return;
+        }
 
         if (DISABLED_USERS.has(userId)) {
             console.log(`⛔ Bot desactivado para ${userId}`);

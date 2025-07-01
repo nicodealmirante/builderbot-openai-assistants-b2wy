@@ -17,6 +17,7 @@ This project creates a WhatsApp bot that integrates with an AI assistant using B
 - Real-time message receiving and responding
 - Interaction tracking with customers
 - Expandable functionality through triggers
+- Send `stop` from your number to disable the bot
 
 ## Getting Started
 
