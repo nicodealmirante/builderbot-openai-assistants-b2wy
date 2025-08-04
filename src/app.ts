@@ -28,13 +28,14 @@ const processUserMessage = async (ctx, { flowDynamic, state, provider }) => {
 
         let enviado = false;
 
-for (const url of mediaUrls) {
-    try {
-        await provider.sendMedia(ctx.from, url, { caption: '' });
-    } catch (err) {
-        console.error('❌ Error al enviar media:', err.message);
-    }
-}
+        for (const url of urls) {
+            try {
+                await provider.sendMedia(ctx.from, url, { caption: '' });
+                enviado = true;
+            } catch (err) {
+                console.error('❌ Error al enviar media:', err.message);
+            }
+        }
 
         if (!enviado && cleanedChunk !== '') {
             await flowDynamic([{ body: cleanedChunk }]);
